@@ -1,0 +1,34 @@
+METODOLOGIA E TÉCNICAS DA PESQUISA
+Neste capítulo, apresentamos a metodologia utilizada para a análise https://www.smiles.com.br/homedetalhada das ofertas de passagens aéreas e programas de milhagem nas três principais companhias aéreas brasileiras: Azul, Gol e Smiles. O estudo abrange a coleta e análise de dados dos sites oficiais dessas empresas, incluindo informações sobre preços, rotas, disponibilidade de assentos e valores das viagens em milhas. Para alcançar esse objetivo, implementamos um processo automatizado de extração de dados conhecido como web scraping (raspagem de dados), uma técnica que permite coletar informações estruturadas diretamente das páginas web. Esta abordagem foi essencial para a geração de indicadores que servirão como base para o desenvolvimento da API proposta neste trabalho.
+Métricas e coleta de dados
+	A coleta de dados neste Trabalho de Conclusão de Curso (TCC) é uma etapa central, focada na obtenção de informações sobre os melhores valores de passagens aéreas em milhas e dinheiro a partir dos sites das companhias Azul, Gol e Smiles ao longo de um ano. Para orientar esse processo, foram definidas métricas específicas que direcionaram a captura e a análise dos dados, como o preço em reais por trecho, o custo em milhas por trecho, a relação entre preço em dinheiro e milhas, a disponibilidade de voos e as variações de preço conforme os meses. Essas métricas foram essenciais para estruturar a raspagem de dados e oferecer uma visão comparativa entre as plataformas, permitindo identificar tendências sazonais e oportunidades de economia para os usuários.
+Diferentemente de abordagens tradicionais de web scraping que analisam o HTML das páginas, neste projeto optou-se por mapear as requisições diretamente pelos endpoints das APIs utilizadas pelos sites das companhias aéreas. Esse processo foi iniciado com a análise da aba "Network" do navegador, onde foram identificadas as chamadas HTTP realizadas ao buscar voos nos sites da Azul (www.voeazul.com.br), Gol (www.voegol.com.br) e Smiles (www.smiles.com.br). Por exemplo, ao simular uma busca de voo São Paulo-Rio de Janeiro, foi possível capturar URLs como "https://api.voeazul.com.br/flights" ou "https://api.smiles.com.br/search", que retornavam os dados em formato JSON com preços e disponibilidades. Utilizando Python e a biblioteca Requests, essas requisições foram replicadas programaticamente, coletando informações de forma mais eficiente e evitando bloqueios comuns ao scraping de páginas renderizadas.
+
+
+Requisição
+https://api-air-flightsearch-blue.smiles.com.br/v1/airlines/search?cabin=ECONOMIC&originAirportCode=CGH&destinationAirportCode=RIO&departureDate=2025-05-29&returnDate=2025-05-30
+Retornando os dados de voo da Smiles
+
+https://b2c-api.voeazul.com.br/reservationavailability/api/reservation/availability/v5/availability, Requisição retornando os dados de voo da azul. 
+
+Resposta requisição smiles
+
+A coleta foi planejada para ocorrer semanalmente entre janeiro e dezembro de 2025, abrangendo destinos populares como São Paulo, Rio de Janeiro e Salvador. Os dados brutos extraídos, como "R$620,00" ou "22.000 milhas" para um voo hipotético São Paulo-Salvador em abril, foram organizados em uma base estruturada com o uso da biblioteca pandas. Cada entrada foi registrada com colunas como "origem", "destino", "data", "preço em reais" e "preço em milhas", armazenadas em uma planilha Excel para facilitar análises posteriores. 
+
+
+
+
+As métricas definidas também foram a base para a análise dos dados coletados. A relação custo-benefício, calculada como o preço em reais dividido pelo número de milhas, revelou, por exemplo, que em julho de 2025 (de forma fictícia) a Gol oferecia uma média de R$ 0,028 por milha, enquanto a Smiles apresentava R$ 0,023, indicando maior vantagem no uso de milhas nesta última durante a alta temporada. Essa abordagem via endpoints, além de ser mais rápida e menos suscetível a bloqueios, permitiu uma coleta precisa e confiável, gerando um conjunto de dados robusto para explorar o mercado de passagens aéreas. Os resultados obtidos abrem caminho para insights valiosos tanto para consumidores quanto para estudos futuros em ciência de dados e automação de coleta de informações online.
+
+#####
+FOTO PLANILHA
+#####
+
+
+
+Selecionando Dados a Serem Raspados
+Desenvolvendo o Script de Raspagem
+
+Executando o Script
+	Conclusão do capítulo
+Neste capítulo, conhecemos a metodologia e técnica aplicada para identificar as métricas e a coleta de dados, identificando web sites relevantes para a metodologia e seleção dos respectivos dados a serem raspados pelo script de raspagem e análise inicial dos dados para identificação dos padrões que precisam ser levados em consideração para alcançar os objetivos do trabalho.

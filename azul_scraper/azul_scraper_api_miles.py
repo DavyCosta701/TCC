@@ -35,20 +35,31 @@ def extract_flight_info(response_data):
             print(f"Not enough trips in response. Found: {len(trips)}")
             return {"error": "Not enough trip data"}
 
+        outbound_trip = trips[0] or {}
+        inbound_trip = trips[1] or {}
+        if not isinstance(outbound_trip, dict):
+            outbound_trip = {}
+        if not isinstance(inbound_trip, dict):
+            inbound_trip = {}
+
         result = {
             "outbound_flights": [],
             "inbound_flights": [],
-            "lowest_outbound": trips[0]
+            "lowest_outbound": outbound_trip
             .get("fareInformation", {})
             .get("lowestPoints", float("inf")),
-            "lowest_inbound": trips[1]
+            "lowest_inbound": inbound_trip
             .get("fareInformation", {})
             .get("lowestPoints", float("inf")),
         }
 
         # Process outbound flights
-        if "flightDates" in trips[0] and trips[0]["flightDates"]:
-            for flight in trips[0]["flightDates"][0].get("flights", []):
+        outbound_dates = outbound_trip.get("flightDates") or []
+        if outbound_dates:
+            first_outbound = outbound_dates[0] or {}
+            for flight in first_outbound.get("flights", []) or []:
+                if not isinstance(flight, dict):
+                    continue
                 flight_data = {
                     "flight_number": flight.get("flightNumber", "Unknown"),
                     "departure": flight.get("departureTime", "Unknown"),
@@ -58,7 +69,9 @@ def extract_flight_info(response_data):
                 }
 
                 # Get price for each fare category
-                for fare in flight.get("fares", []):
+                for fare in flight.get("fares", []) or []:
+                    if not isinstance(fare, dict):
+                        continue
                     if fare.get("points") is not None:
                         flight_data["prices"][fare.get("fareName", "Unknown")] = fare[
                             "points"
@@ -67,8 +80,12 @@ def extract_flight_info(response_data):
                 result["outbound_flights"].append(flight_data)
 
         # Process inbound flights
-        if "flightDates" in trips[1] and trips[1]["flightDates"]:
-            for flight in trips[1]["flightDates"][0].get("flights", []):
+        inbound_dates = inbound_trip.get("flightDates") or []
+        if inbound_dates:
+            first_inbound = inbound_dates[0] or {}
+            for flight in first_inbound.get("flights", []) or []:
+                if not isinstance(flight, dict):
+                    continue
                 flight_data = {
                     "flight_number": flight.get("flightNumber", "Unknown"),
                     "departure": flight.get("departureTime", "Unknown"),
@@ -78,13 +95,18 @@ def extract_flight_info(response_data):
                 }
 
                 # Get price for each fare category
-                for fare in flight.get("fares", []):
+                for fare in flight.get("fares", []) or []:
+                    if not isinstance(fare, dict):
+                        continue
                     if fare.get("points") is not None:
                         flight_data["prices"][fare.get("fareName", "Unknown")] = fare[
                             "points"
                         ]
 
                 result["inbound_flights"].append(flight_data)
+
+        if not result["outbound_flights"] and not result["inbound_flights"]:
+            print("No flight details available in response")
 
         return result
 
@@ -284,11 +306,6 @@ class FlightSearchMiles:
                 impersonate="chrome123",
             )
 
-            # For debugging
-            file_path = f"debug/resp_{departure_date.replace('/', '_')}_{return_date.replace('/', '_')}.json"
-            with open(file_path, "w") as f:
-                json.dump(resp.json(), f)
-
             # Basic validation
             response_data = resp.json()
             if "data" not in response_data:
@@ -362,8 +379,8 @@ class FlightSearchMiles:
 if __name__ == "__main__":
     origin = "BEL"
     destination = "GRU"
-    departure_date = "10/30/2025"
-    return_date = "11/30/2025"
+    departure_date = "01/30/2026"
+    return_date = "02/02/2026"
     flight_search = FlightSearchMiles()
 
     # Search only for the specified dates (not date range)

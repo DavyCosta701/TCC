@@ -105,8 +105,13 @@ def extract_flight_info(response_data):
 
                 result["inbound_flights"].append(flight_data)
 
-        if not result["outbound_flights"] and not result["inbound_flights"]:
-            print("No flight details available in response")
+        if (
+            not result["outbound_flights"]
+            and not result["inbound_flights"]
+            and result["lowest_outbound"] == float("inf")
+            and result["lowest_inbound"] == float("inf")
+        ):
+            print("No flight details or prices available in response")
 
         return result
 
@@ -140,6 +145,7 @@ class FlightSearchMiles:
     def __init__(self):
         self.requests_headers = None
         self.requests_body_template = None
+        self.api_url = None
 
     def create_flight_search_url(
         self, origin, destination, departure_date, return_date
@@ -185,12 +191,13 @@ class FlightSearchMiles:
 
     async def _on_request(self, data: InterceptedRequest):
         if (
-            "https://b2c-api.voeazul.com.br/tudoAzulReservationAvailability/api/tudoazul/reservation/availability/v6/availability"
-            in data.request.url
+            "tudoazul/reservation/availability" in data.request.url
             and data.request.method == "POST"
         ):
+            # print(f"Captured API URL: {data.request.url}")
             self.requests_headers = data.request.headers
             self.requests_body_template = json.loads(data.request.post_data)
+            self.api_url = data.request.url
 
     async def initialize_headers(
         self, origin, destination, departure_date, return_date
@@ -201,6 +208,7 @@ class FlightSearchMiles:
         if (
             self.requests_headers is not None
             and self.requests_body_template is not None
+            and self.api_url is not None
         ):
             return  # Already initialized
 
@@ -217,7 +225,7 @@ class FlightSearchMiles:
                 patterns=[RequestPattern.AnyRequest],
             ) as _:
                 asyncio.ensure_future(driver.get(url))
-                await driver.sleep(10)
+                await driver.sleep(15)
 
         if not self.requests_headers or not self.requests_body_template:
             print(
@@ -316,8 +324,14 @@ class FlightSearchMiles:
                     continue
                 cleaned_headers[k] = v
 
+            # Use captured API URL or fallback to v6
+            api_url = (
+                self.api_url
+                or "https://b2c-api.voeazul.com.br/tudoAzulReservationAvailability/api/tudoazul/reservation/availability/v6/availability"
+            )
+
             resp = requests.post(
-                url="https://b2c-api.voeazul.com.br/tudoAzulReservationAvailability/api/tudoazul/reservation/availability/v6/availability",
+                url=api_url,
                 headers=cleaned_headers,
                 json=request_body,
                 impersonate="chrome124",

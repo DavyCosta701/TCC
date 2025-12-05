@@ -72,6 +72,7 @@ class FlightSearchMoney:
     def __init__(self):
         self.requests_headers = None
         self.requests_body_template = None
+        self.api_url = None
 
     def create_flight_search_url(
         self, origin, destination, departure_date, return_date
@@ -114,12 +115,13 @@ class FlightSearchMoney:
 
     async def _on_request(self, data: InterceptedRequest):
         if (
-            "https://b2c-api.voeazul.com.br/reservationavailability/api/reservation/availability/v5/availability"
-            in data.request.url
+            "reservation/availability" in data.request.url
             and data.request.method == "POST"
         ):
+            # print(f"Captured API URL: {data.request.url}")
             self.requests_headers = data.request.headers
             self.requests_body_template = json.loads(data.request.post_data)
+            self.api_url = data.request.url
 
     async def initialize_headers(
         self, origin, destination, departure_date, return_date
@@ -130,6 +132,7 @@ class FlightSearchMoney:
         if (
             self.requests_headers is not None
             and self.requests_body_template is not None
+            and self.api_url is not None
         ):
             return
 
@@ -146,7 +149,7 @@ class FlightSearchMoney:
                 patterns=[RequestPattern.AnyRequest],
             ) as _:
                 asyncio.ensure_future(driver.get(url))
-                await driver.sleep(10)
+                await driver.sleep(15)
 
         if not self.requests_headers or not self.requests_body_template:
             print(
@@ -216,18 +219,43 @@ class FlightSearchMoney:
                 origin, destination, departure_date, return_date
             )
 
-            resp = requests.post(
-                url="https://b2c-api.voeazul.com.br/reservationavailability/api/reservation/availability/v5/availability",
-                headers=self.requests_headers,
-                json=request_body,
-                impersonate="chrome123",
+            # Clean headers
+            cleaned_headers = {}
+            for k, v in self.requests_headers.items():
+                if k.startswith(":"):
+                    continue
+                if k.lower() in [
+                    "content-length",
+                    "host",
+                    "connection",
+                    "accept-encoding",
+                    "user-agent",
+                ]:
+                    continue
+                if k.lower().startswith("sec-ch-ua"):
+                    continue
+                cleaned_headers[k] = v
+
+            # Use captured API URL or fallback to v6
+            api_url = (
+                self.api_url
+                or "https://b2c-api.voeazul.com.br/reservationavailability/api/reservation/availability/v6/availability"
             )
 
-            file_path = f"debug/resp_money_{departure_date.replace('/', '_')}_{return_date.replace('/', '_')}.json"
-            with open(file_path, "w") as f:
-                json.dump(resp.json(), f)
+            resp = requests.post(
+                url=api_url,
+                headers=cleaned_headers,
+                json=request_body,
+                impersonate="chrome124",
+            )
 
-            response_data = resp.json()
+            try:
+                response_data = resp.json()
+            except json.JSONDecodeError:
+                print(f"Failed to parse JSON response. Status: {resp.status_code}")
+                print(f"Response text: {resp.text[:500]}...")
+                return {"error": f"Invalid JSON response. Status: {resp.status_code}"}
+
             if "data" not in response_data:
                 print(
                     f"Warning: Response missing 'data' field. Status code: {resp.status_code}"
@@ -297,15 +325,13 @@ class FlightSearchMoney:
 if __name__ == "__main__":
     origin = "BEL"
     destination = "GRU"
-    departure_date = "10/30/2025"
-    return_date = "11/30/2025"
+    departure_date = "01/20/2026"
+    return_date = "01/25/2026"
     flight_search = FlightSearchMoney()
 
     # Search only for the specified dates (not date range)
     flight_data = asyncio.run(
-        flight_search.get_flight_info(
-            origin, destination, departure_date, return_date
-        )
+        flight_search.get_flight_info(origin, destination, departure_date, return_date)
     )
 
     # Print the results
@@ -326,6 +352,5 @@ if __name__ == "__main__":
             print(f"  Outbound: R$ {flight_info['lowest_outbound']:.2f}")
             print(f"  Inbound: R$ {flight_info['lowest_inbound']:.2f}")
 
-            total_price = flight_info['lowest_outbound'] + flight_info['lowest_inbound']
+            total_price = flight_info["lowest_outbound"] + flight_info["lowest_inbound"]
             print(f"\nTotal: R$ {total_price:.2f}")
-    

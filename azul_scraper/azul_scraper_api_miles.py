@@ -45,12 +45,12 @@ def extract_flight_info(response_data):
         result = {
             "outbound_flights": [],
             "inbound_flights": [],
-            "lowest_outbound": outbound_trip
-            .get("fareInformation", {})
-            .get("lowestPoints", float("inf")),
-            "lowest_inbound": inbound_trip
-            .get("fareInformation", {})
-            .get("lowestPoints", float("inf")),
+            "lowest_outbound": outbound_trip.get("fareInformation", {}).get(
+                "lowestPoints", float("inf")
+            ),
+            "lowest_inbound": inbound_trip.get("fareInformation", {}).get(
+                "lowestPoints", float("inf")
+            ),
         }
 
         # Process outbound flights
@@ -299,15 +299,37 @@ class FlightSearchMiles:
                 origin, destination, departure_date, return_date
             )
 
+            # Clean headers
+            cleaned_headers = {}
+            for k, v in self.requests_headers.items():
+                if k.startswith(":"):
+                    continue
+                if k.lower() in [
+                    "content-length",
+                    "host",
+                    "connection",
+                    "accept-encoding",
+                    "user-agent",
+                ]:
+                    continue
+                if k.lower().startswith("sec-ch-ua"):
+                    continue
+                cleaned_headers[k] = v
+
             resp = requests.post(
-                url="https://b2c-api.voeazul.com.br/tudoAzulReservationAvailability/api/tudoazul/reservation/availability/v5/availability",
-                headers=self.requests_headers,
+                url="https://b2c-api.voeazul.com.br/tudoAzulReservationAvailability/api/tudoazul/reservation/availability/v6/availability",
+                headers=cleaned_headers,
                 json=request_body,
-                impersonate="chrome123",
+                impersonate="chrome124",
             )
 
-            # Basic validation
-            response_data = resp.json()
+            try:
+                response_data = resp.json()
+            except json.JSONDecodeError:
+                print(f"Failed to parse JSON response. Status: {resp.status_code}")
+                print(f"Response text: {resp.text[:500]}...")  # Print first 500 chars
+                return {"error": f"Invalid JSON response. Status: {resp.status_code}"}
+
             if "data" not in response_data:
                 print(
                     f"Warning: Response missing 'data' field. Status code: {resp.status_code}"
@@ -385,9 +407,7 @@ if __name__ == "__main__":
 
     # Search only for the specified dates (not date range)
     flight_data = asyncio.run(
-        flight_search.get_flight_info(
-            origin, destination, departure_date, return_date
-        )
+        flight_search.get_flight_info(origin, destination, departure_date, return_date)
     )
 
     # Print the results
@@ -408,5 +428,7 @@ if __name__ == "__main__":
             print(f"  Outbound: {flight_info['lowest_outbound']} points")
             print(f"  Inbound: {flight_info['lowest_inbound']} points")
 
-            total_points = flight_info['lowest_outbound'] + flight_info['lowest_inbound']
+            total_points = (
+                flight_info["lowest_outbound"] + flight_info["lowest_inbound"]
+            )
             print(f"\nTotal: {total_points} points")
